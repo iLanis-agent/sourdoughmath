@@ -1,0 +1,46 @@
+var S = require('./engine.js');
+var pass = 0, fail = 0;
+function t(name, got, want) {
+  var ok = JSON.stringify(got) === JSON.stringify(want);
+  if (ok) pass++; else { fail++; console.log('FAIL ' + name + ': got ' + JSON.stringify(got) + ' want ' + JSON.stringify(want)); }
+}
+t('formula water', S.formula(500, 70, 2, 20, 100).waterG, 350);
+t('formula salt', S.formula(500, 70, 2, 20, 100).saltG, 10);
+t('formula starter', S.formula(500, 70, 2, 20, 100).starterG, 100);
+t('formula starter flour', S.formula(500, 70, 2, 20, 100).starterFlourG, 50);
+t('formula total flour', S.formula(500, 70, 2, 20, 100).totalFlourG, 550);
+t('formula true hydration', S.formula(500, 70, 2, 20, 100).trueHydrationPct, 72.73);
+t('formula true salt pct', S.formula(500, 70, 2, 20, 100).saltTruePct, 1.82);
+t('formula total dough', S.formula(500, 70, 2, 20, 100).totalDoughG, 960);
+t('formula zero flour null', S.formula(0, 70, 2, 20, 100), null);
+t('formula stiff starter flour', S.formula(1000, 65, 2, 10, 50).starterFlourG, 66.7);
+t('levain 1:5:5 from 20g', S.levain(20, 5), { seedG: 20, flourG: 100, waterG: 100, totalG: 220 });
+t('levain 1:1:1 from 50g', S.levain(50, 1), { seedG: 50, flourG: 50, waterG: 50, totalG: 150 });
+t('levain zero null', S.levain(0, 5), null);
+t('bulk at ref temp 20pct', S.bulkHours(20, 24), 4.5);
+t('bulk 10pct slower', S.bulkHours(10, 24), 9);
+t('bulk 40pct faster', S.bulkHours(40, 24), 2.25);
+t('bulk 8C cooler doubles', S.bulkHours(20, 16), 9);
+t('bulk 8C warmer halves', S.bulkHours(20, 32), 2.25);
+t('bulk 16C cooler quadruples', S.bulkHours(20, 8), 18);
+t('bulk too cold null', S.bulkHours(20, 2), null);
+t('bulk too hot null', S.bulkHours(20, 42), null);
+t('proof is 35% of bulk', S.proofHours(20, 24), 1.58);
+t('fridge retard window', S.fridgeRetardHours(), { min: 8, max: 16 });
+t('verdict cool warns', S.tempVerdict(16).level, 'warn');
+t('verdict sweet', S.tempVerdict(24).level, 'good');
+t('verdict warm warns', S.tempVerdict(28).level, 'warn');
+t('verdict hot bad', S.tempVerdict(33).level, 'bad');
+t('water temp to hit 26 ddt', S.waterTempC(26, 22, 22, 2), 32);
+t('water temp cold kitchen', S.waterTempC(26, 18, 18, 2), 40);
+t('timeline same-day', S.timeline(480, 4.5, 1.58, 0), { mixMin: 480, shapeMin: 750, bakeMin: 845 });
+t('timeline retard next day', S.timeline(1080, 4, 0, 12), { mixMin: 1080, shapeMin: 1320, bakeMin: 2085 });
+t('fmt 480', S.fmtClock(480), '08:00');
+t('fmt 845', S.fmtClock(845), '14:05');
+t('fmt wraps midnight', S.fmtClock(1500), '01:00');
+t('fmt negative wraps', S.fmtClock(-60), '23:00');
+t('blend 15% ww', S.blend(500, [{ name: 'Bread flour', pct: 85 }, { name: 'Whole wheat', pct: 15 }]), [{ name: 'Bread flour', g: 425 }, { name: 'Whole wheat', g: 75 }]);
+t('blend bad sum null', S.blend(500, [{ name: 'A', pct: 50 }]), null);
+t('blend three way', S.blend(1000, [{ name: 'A', pct: 70 }, { name: 'B', pct: 20 }, { name: 'C', pct: 10 }])[1].g, 200);
+console.log(pass + ' passed, ' + fail + ' failed');
+process.exit(fail ? 1 : 0);
