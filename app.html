@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SourdoughMath - baker's percentages and honest fermentation timing</title>
+<style>
+:root { --bg:#0f1216; --card:#1a1f27; --ink:#e8ecf1; --dim:#9aa4b2; --acc:#e8a33d; --good:#4caf7d; --warn:#e8a33d; --bad:#e05c5c; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 -apple-system,Segoe UI,Roboto,sans-serif; }
+.wrap { max-width:760px; margin:0 auto; padding:24px 16px 60px; }
+h1 { font-size:28px; margin:8px 0 2px; }
+.sub { color:var(--dim); margin:0 0 18px; }
+.presets { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+.presets button { background:var(--card); color:var(--ink); border:1px solid #2a3240; border-radius:20px; padding:7px 14px; cursor:pointer; font-size:14px; }
+.presets button.on { border-color:var(--acc); color:var(--acc); }
+.card { background:var(--card); border-radius:14px; padding:16px 18px; margin-bottom:14px; }
+.card h2 { font-size:17px; margin:0 0 12px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+label { display:block; color:var(--dim); font-size:13px; margin-bottom:4px; }
+input { width:100%; background:#12161c; border:1px solid #2a3240; color:var(--ink); border-radius:8px; padding:8px 10px; font-size:16px; }
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-top:12px; }
+.stat { background:#12161c; border-radius:10px; padding:10px 12px; }
+.stat b { display:block; font-size:20px; color:var(--acc); }
+.stat span { color:var(--dim); font-size:12px; }
+.note { margin-top:12px; padding:10px 12px; border-radius:10px; font-size:14px; background:#26200f; color:var(--warn); }
+.note.good { background:#12241b; color:var(--good); }
+.note.bad { background:#2a1515; color:var(--bad); }
+table { width:100%; border-collapse:collapse; margin-top:8px; font-size:15px; }
+th, td { text-align:left; padding:6px 8px; border-bottom:1px solid #262e3a; }
+th { color:var(--dim); font-weight:600; font-size:13px; }
+.foot { color:var(--dim); font-size:13px; margin-top:6px; }
+a { color:var(--acc); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🍞 SourdoughMath</h1>
+<p class="sub">Baker's percentages and fermentation timing that admits your kitchen has a temperature. Recipes say "about 4 hours" - this says why yours won't be.</p>
+<div class="presets">
+  <button data-p="country">Country loaf 75%</button>
+  <button data-p="cold">Cold winter kitchen</button>
+  <button data-p="hot">Hot summer kitchen</button>
+  <button data-p="same">Same-day white</button>
+</div>
+
+<div class="card">
+<h2>1. The formula</h2>
+<div class="grid">
+  <div><label>Flour (g)</label><input id="flour" type="number" value="500" step="10"></div>
+  <div><label>Water (%)</label><input id="water" type="number" value="75" step="1"></div>
+  <div><label>Salt (%)</label><input id="salt" type="number" value="2" step="0.1"></div>
+  <div><label>Starter (%)</label><input id="starter" type="number" value="20" step="1"></div>
+  <div><label>Starter hydration (%)</label><input id="shyd" type="number" value="100" step="10"></div>
+</div>
+<table id="ing"></table>
+<div class="stats" id="fstats"></div>
+</div>
+
+<div class="card">
+<h2>2. Levain build</h2>
+<div class="grid">
+  <div><label>Ripe starter kept (g)</label><input id="seed" type="number" value="20" step="5"></div>
+  <div><label>Feed ratio (1:r:r)</label><input id="ratio" type="number" value="5" step="1"></div>
+</div>
+<div class="stats" id="lev"></div>
+</div>
+
+<div class="card">
+<h2>3. Fermentation, honestly</h2>
+<div class="grid">
+  <div><label>Kitchen temp (°C)</label><input id="ktemp" type="number" value="24" step="1"></div>
+</div>
+<div class="stats" id="ferm"></div>
+<div class="note" id="verdict"></div>
+</div>
+
+<div class="card">
+<h2>4. Water temperature</h2>
+<div class="grid">
+  <div><label>Target dough temp (°C)</label><input id="ddt" type="number" value="26" step="1"></div>
+  <div><label>Flour temp (°C)</label><input id="ftemp" type="number" value="22" step="1"></div>
+  <div><label>Room temp (°C)</label><input id="rtemp" type="number" value="22" step="1"></div>
+  <div><label>Mixing friction (°C)</label><input id="fric" type="number" value="2" step="1"></div>
+</div>
+<div class="stats" id="wt"></div>
+</div>
+
+<div class="card">
+<h2>5. Today's timeline</h2>
+<div class="grid">
+  <div><label>Mix at (HH:MM)</label><input id="start" type="text" value="09:00"></div>
+  <div><label>Fridge retard (h, 0 = none)</label><input id="retard" type="number" value="0" step="1"></div>
+</div>
+<div class="stats" id="tl"></div>
+</div>
+
+<p class="foot">Starter counts toward total flour and water (half and half at 100% hydration). Bulk model: 4.5h at 24°C for 20% starter, rate doubling every ~8°C - treat the estimate as a range and watch the dough: 50-75% rise, domed edges, jiggle. <a href="https://github.com/iLanis-agent/sourdoughmath">Source</a></p>
+</div>
+<script src="engine.js"></script>
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var fields = ['flour','water','salt','starter','shyd','seed','ratio','ktemp','ddt','ftemp','rtemp','fric','start','retard'];
+function num(id) { return parseFloat($(id).value) || 0; }
+function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+
+function render() {
+  var f = SourdoughMath.formula(num('flour'), num('water'), num('salt'), num('starter'), num('shyd'));
+  if (f) {
+    $('ing').innerHTML = '<tr><th>Ingredient</th><th>Grams</th><th>% of flour</th></tr>' +
+      '<tr><td>Flour</td><td>' + num('flour') + '</td><td>100</td></tr>' +
+      '<tr><td>Water</td><td>' + f.waterG + '</td><td>' + num('water') + '</td></tr>' +
+      '<tr><td>Salt</td><td>' + f.saltG + '</td><td>' + num('salt') + '</td></tr>' +
+      '<tr><td>Starter</td><td>' + f.starterG + '</td><td>' + num('starter') + '</td></tr>';
+    $('fstats').innerHTML =
+      '<div class="stat"><b>' + f.totalDoughG + ' g</b><span>Total dough</span></div>' +
+      '<div class="stat"><b>' + f.trueHydrationPct + '%</b><span>True hydration (starter counted)</span></div>' +
+      '<div class="stat"><b>' + f.saltTruePct + '%</b><span>True salt</span></div>' +
+      '<div class="stat"><b>' + f.totalFlourG + ' g</b><span>Total flour</span></div>';
+  }
+  var lv = SourdoughMath.levain(num('seed'), num('ratio'));
+  if (lv) {
+    $('lev').innerHTML =
+      '<div class="stat"><b>' + lv.seedG + ' g</b><span>Seed</span></div>' +
+      '<div class="stat"><b>' + lv.flourG + ' g</b><span>+ Flour</span></div>' +
+      '<div class="stat"><b>' + lv.waterG + ' g</b><span>+ Water</span></div>' +
+      '<div class="stat"><b>' + lv.totalG + ' g</b><span>= Levain (peaks in ~' + (SourdoughMath.bulkHours(100 / (1 + 1), num('ktemp')) || '?') + ' h)</span></div>';
+  }
+  var bulk = SourdoughMath.bulkHours(num('starter'), num('ktemp'));
+  var proof = SourdoughMath.proofHours(num('starter'), num('ktemp'));
+  if (bulk !== null) {
+    $('ferm').innerHTML =
+      '<div class="stat"><b>' + bulk + ' h</b><span>Bulk at ' + num('ktemp') + '°C</span></div>' +
+      '<div class="stat"><b>' + proof + ' h</b><span>Final proof (same temp)</span></div>' +
+      '<div class="stat"><b>8-16 h</b><span>Or fridge retard</span></div>';
+  } else {
+    $('ferm').innerHTML = '<div class="stat"><b>--</b><span>Outside 4-40°C the model gives up. So would the yeast.</span></div>';
+  }
+  var v = SourdoughMath.tempVerdict(num('ktemp'));
+  var vn = $('verdict');
+  vn.className = 'note ' + v.level;
+  vn.textContent = v.note;
+  var wt = SourdoughMath.waterTempC(num('ddt'), num('ftemp'), num('rtemp'), num('fric'));
+  $('wt').innerHTML = '<div class="stat"><b>' + wt + '°C</b><span>Water to hit ' + num('ddt') + '°C dough</span></div>' +
+    (wt > 45 ? '<div class="stat"><b>careful</b><span>Above ~45°C water can scald starter. Cool the target or warm the room.</span></div>' : '');
+  var hm = $('start').value.match(/^(\d{1,2}):(\d{2})$/);
+  if (hm && bulk !== null) {
+    var startMin = (+hm[1]) * 60 + (+hm[2]);
+    var retard = num('retard');
+    var tl = SourdoughMath.timeline(startMin, bulk, proof, retard);
+    $('tl').innerHTML =
+      '<div class="stat"><b>' + SourdoughMath.fmtClock(tl.mixMin) + '</b><span>Mix (day 1)</span></div>' +
+      '<div class="stat"><b>' + SourdoughMath.fmtClock(tl.shapeMin) + '</b><span>Shape (bulk done)</span></div>' +
+      '<div class="stat"><b>' + SourdoughMath.fmtClock(tl.bakeMin) + '</b><span>' + (retard > 0 ? 'Bake (day 2, after 45 min warm-up)' : 'Bake (same day)') + '</span></div>';
+  }
+}
+
+var presets = {
+  country: { flour: 500, water: 75, salt: 2, starter: 20, shyd: 100, ktemp: 24, ddt: 26, ftemp: 22, rtemp: 22, retard: 12 },
+  cold: { flour: 500, water: 72, salt: 2, starter: 25, shyd: 100, ktemp: 17, ddt: 27, ftemp: 16, rtemp: 17, retard: 0 },
+  hot: { flour: 500, water: 68, salt: 2, starter: 10, shyd: 100, ktemp: 31, ddt: 24, ftemp: 29, rtemp: 31, retard: 0 },
+  same: { flour: 400, water: 68, salt: 2, starter: 30, shyd: 100, ktemp: 25, ddt: 26, ftemp: 23, rtemp: 25, retard: 0 }
+};
+var btns = document.querySelectorAll('.presets button');
+btns.forEach(function (b) {
+  b.addEventListener('click', function () {
+    var p = presets[b.dataset.p], k;
+    for (k in p) { if ($(k)) $(k).value = p[k]; }
+    btns.forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    render();
+  });
+});
+fields.forEach(function (id) { $(id).addEventListener('input', render); });
+document.querySelector('[data-p="country"]').classList.add('on');
+render();
+</script>
+</body>
+</html>
